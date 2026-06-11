@@ -1,7 +1,8 @@
 # トイポーカー研究環境 — 要件定義
 
 > 最終更新: 2026-06-11  
-> ステータス: Phase 1 要件確定 / Phase 2 概要確定
+> ステータス: Phase 1 要件確定 / Phase 2 概要確定  
+> 関連: [技術要件定義](./technical-requirements.md)
 
 ---
 
@@ -154,27 +155,7 @@ Phase 1 完了後に着手。
 - [ ] Exploitability 計算（Leduc 等、2 人零和）
 - [ ] Kuhn の既知 Nash 均衡値との数値比較（検証用）
 
-### 2.6 ディレクトリ構成（案）
-
-```
-toy-poker/
-├── docs/
-│   └── requirements.md
-├── src/
-│   └── toy_poker/
-│       ├── core/            # State 基底, Action, RNG
-│       ├── games/           # kuhn, leduc
-│       ├── agents/          # random (Phase 1), cfr_agent (Phase 2)
-│       ├── solvers/         # cfr (Phase 2)
-│       ├── trees/           # ゲーム木・情報集合 (Phase 2)
-│       └── runner/          # ハンド実行, テキスト履歴
-├── tests/
-├── examples/                # 対戦デモスクリプト
-├── pyproject.toml
-└── README.md
-```
-
-### 2.7 非機能要件
+### 2.6 非機能要件
 
 | 項目 | 目標 |
 |------|------|
@@ -182,6 +163,8 @@ toy-poker/
 | 性能 | Leduc の全ゲーム木展開が数秒以内（Phase 2 時点） |
 | 拡張性 | 新ゲーム追加時、`games/` に追加するだけ |
 | 依存関係 | コアは **stdlib + numpy のみ** |
+
+ディレクトリ構成・モジュール設計・型定義・テスト方針の詳細は [technical-requirements.md](./technical-requirements.md) を参照。
 
 ---
 
@@ -247,3 +230,4 @@ toy-poker/
 | 2026-06-11 | 初版作成 |
 | 2026-06-11 | ユーザー回答を反映。Phase 1/2 分割、API 比較追加、可視化・論文再現の方針確定 |
 | 2026-06-11 | API を OpenSpiel 風で確定。Kuhn を 2 人版のみに変更（3 人版はスコープ外） |
+| 2026-06-11 | 技術要件定義（technical-requirements.md）を追加し整合 |
