@@ -10,6 +10,13 @@ from toy_poker.games.kuhn import KuhnAction, KuhnGame, KuhnState
 
 J, Q, K = 0, 1, 2
 
+# KuhnAction.PASS: check (no bet pending) or fold (facing a bet).
+# KuhnAction.BET: open bet (no bet pending) or call (facing a bet).
+CHECK = KuhnAction.PASS
+FOLD = KuhnAction.PASS
+BET = KuhnAction.BET
+CALL = KuhnAction.BET
+
 
 @pytest.fixture
 def game() -> KuhnGame:
@@ -47,35 +54,48 @@ class TestChanceNode:
 
 
 class TestLegalActions:
-    def test_player_node_pass_and_bet(self, game: KuhnGame) -> None:
+    def test_player_node_check_and_bet(self, game: KuhnGame) -> None:
         state = deal_cards(game.new_initial_state(), Q, J)
         assert not state.is_chance_node()
         assert state.current_player() == 0
-        assert state.legal_actions() == [KuhnAction.PASS, KuhnAction.BET]
+        assert state.legal_actions() == [CHECK, BET]
 
 
 class TestTransitions:
+    """Terminal paths from technical-requirements.md §6.1.3."""
+
     def test_check_check_showdown(self, game: KuhnGame) -> None:
+        # P0 check → P1 check → showdown
         state = deal_cards(game.new_initial_state(), Q, J)
-        state = play_actions(state, [KuhnAction.PASS, KuhnAction.PASS])
+        state = play_actions(state, [CHECK, CHECK])
+        assert state.is_terminal()
+        assert state.winner == 0
+
+    def test_check_bet_fold(self, game: KuhnGame) -> None:
+        # P0 check → P1 bet → P0 fold
+        state = deal_cards(game.new_initial_state(), J, K)
+        state = play_actions(state, [CHECK, BET, FOLD])
+        assert state.is_terminal()
+        assert state.winner == 1
+
+    def test_check_bet_call_showdown(self, game: KuhnGame) -> None:
+        # P0 check → P1 bet → P0 call → showdown
+        state = deal_cards(game.new_initial_state(), K, J)
+        state = play_actions(state, [CHECK, BET, CALL])
         assert state.is_terminal()
         assert state.winner == 0
 
     def test_bet_fold(self, game: KuhnGame) -> None:
+        # P0 bet → P1 fold
         state = deal_cards(game.new_initial_state(), K, J)
-        state = play_actions(state, [KuhnAction.BET, KuhnAction.PASS])
+        state = play_actions(state, [BET, FOLD])
         assert state.is_terminal()
         assert state.winner == 0
 
-    def test_pass_bet_fold(self, game: KuhnGame) -> None:
-        state = deal_cards(game.new_initial_state(), J, K)
-        state = play_actions(state, [KuhnAction.PASS, KuhnAction.BET, KuhnAction.PASS])
-        assert state.is_terminal()
-        assert state.winner == 1
-
     def test_bet_call_showdown(self, game: KuhnGame) -> None:
+        # P0 bet → P1 call → showdown
         state = deal_cards(game.new_initial_state(), K, Q)
-        state = play_actions(state, [KuhnAction.BET, KuhnAction.BET])
+        state = play_actions(state, [BET, CALL])
         assert state.is_terminal()
         assert state.winner == 0
 
@@ -93,47 +113,46 @@ class TestTransitions:
 class TestPayoffs:
     def test_check_check_winner_plus_one(self, game: KuhnGame) -> None:
         state = deal_cards(game.new_initial_state(), K, Q)
-        state = play_actions(state, [KuhnAction.PASS, KuhnAction.PASS])
+        state = play_actions(state, [CHECK, CHECK])
         assert state.returns() == [1.0, -1.0]
+
+    def test_check_bet_fold_winner_plus_one(self, game: KuhnGame) -> None:
+        state = deal_cards(game.new_initial_state(), J, K)
+        state = play_actions(state, [CHECK, BET, FOLD])
+        assert state.returns() == [-1.0, 1.0]
+
+    def test_check_bet_call_winner_plus_two(self, game: KuhnGame) -> None:
+        state = deal_cards(game.new_initial_state(), K, J)
+        state = play_actions(state, [CHECK, BET, CALL])
+        assert state.returns() == [2.0, -2.0]
 
     def test_bet_fold_winner_plus_one(self, game: KuhnGame) -> None:
         state = deal_cards(game.new_initial_state(), Q, J)
-        state = play_actions(state, [KuhnAction.BET, KuhnAction.PASS])
+        state = play_actions(state, [BET, FOLD])
         assert state.returns() == [1.0, -1.0]
 
     def test_bet_call_showdown_winner_plus_two(self, game: KuhnGame) -> None:
         state = deal_cards(game.new_initial_state(), K, J)
-        state = play_actions(state, [KuhnAction.BET, KuhnAction.BET])
+        state = play_actions(state, [BET, CALL])
         assert state.returns() == [2.0, -2.0]
-
-    def test_pass_bet_fold(self, game: KuhnGame) -> None:
-        state = deal_cards(game.new_initial_state(), J, K)
-        state = play_actions(state, [KuhnAction.PASS, KuhnAction.BET, KuhnAction.PASS])
-        assert state.returns() == [-1.0, 1.0]
 
 
 class TestZeroSum:
     def test_all_terminal_states_zero_sum(self, game: KuhnGame) -> None:
         cards = [J, Q, K]
-        bet_pass = [KuhnAction.PASS, KuhnAction.BET]
-        action_sequences = list(itertools.product(bet_pass, repeat=3))
-        action_sequences += [
-            (KuhnAction.PASS, KuhnAction.PASS),
-            (KuhnAction.PASS, KuhnAction.BET, KuhnAction.PASS),
-            (KuhnAction.PASS, KuhnAction.BET, KuhnAction.BET),
-            (KuhnAction.BET, KuhnAction.PASS),
-            (KuhnAction.BET, KuhnAction.BET),
+        terminal_sequences = [
+            (CHECK, CHECK),
+            (CHECK, BET, FOLD),
+            (CHECK, BET, CALL),
+            (BET, FOLD),
+            (BET, CALL),
         ]
 
         for p0_card, p1_card in itertools.permutations(cards, 2):
-            for actions in action_sequences:
+            for actions in terminal_sequences:
                 state = deal_cards(game.new_initial_state(), p0_card, p1_card)
-                try:
-                    state = play_actions(state, list(actions))
-                except (ValueError, IndexError):
-                    continue
-                if not state.is_terminal():
-                    continue
+                state = play_actions(state, list(actions))
+                assert state.is_terminal()
                 returns = state.returns()
                 assert returns[0] + returns[1] == pytest.approx(0.0)
 
@@ -141,7 +160,7 @@ class TestZeroSum:
 class TestInformationState:
     def test_infostate_matches_openspiel_style(self, game: KuhnGame) -> None:
         state = deal_cards(game.new_initial_state(), K, Q)
-        state = state.apply_action(KuhnAction.BET)
+        state = state.apply_action(BET)
         assert state.information_state_string(0) == "2b"
         assert state.information_state_string(1) == "1b"
 
@@ -149,7 +168,7 @@ class TestInformationState:
 class TestActionHistory:
     def test_history_strings(self, game: KuhnGame) -> None:
         state = deal_cards(game.new_initial_state(), K, Q)
-        state = play_actions(state, [KuhnAction.BET, KuhnAction.BET])
+        state = play_actions(state, [BET, CALL])
         assert state.action_history() == [
             "Deal P0: K",
             "Deal P1: Q",
