@@ -10,7 +10,7 @@
 ## 1. 技術方針
 
 | 方針 | 内容 |
-|------|------|
+| ------ | ------ |
 | 設計パラダイム | OpenSpiel 風の**明示的ゲーム木**（状態 = ノード、遷移 = 非破壊コピー） |
 | 実装方針 | 完全自前。OpenSpiel / Gymnasium は**実行時依存に含めない** |
 | 段階的リリース | Phase 1 = ゲームエンジン + ランダム / 人間（CLI）AI、Phase 2 = CFR + 均衡 AI |
@@ -22,7 +22,7 @@
 ## 2. 機能要件との整合表
 
 | 機能要件（requirements.md） | 技術要件（本書） | Phase |
-|------------------------------|------------------|-------|
+| ------------------------------ | ------------------ | ------- |
 | §2.1 Kuhn（2 人）→ Leduc 順 | §6.1, §6.2 実装順序 | 1 |
 | §2.2 Kuhn 2 人版（3 人版不要） | §6.1 OpenSpiel 互換定式化 | 1 |
 | §2.3 OpenSpiel 風 API | §5 コア抽象化 | 1 |
@@ -45,7 +45,7 @@
 ### 3.1 ランタイム
 
 | 項目 | 仕様 |
-|------|------|
+| ------ | ------ |
 | Python | **3.11+** |
 | パッケージ管理 | `pyproject.toml`（PEP 621） |
 | ビルド | `hatchling` または `setuptools` |
@@ -56,13 +56,13 @@
 #### コア（本番 / Phase 1–2 共通）
 
 | パッケージ | 用途 | 備考 |
-|-----------|------|------|
+| ----------- | ------ | ------ |
 | `numpy` | 数値計算、確率分布 | CFR の regret 更新（Phase 2） |
 
 #### 開発のみ（`[dev]` extra）
 
 | パッケージ | 用途 |
-|-----------|------|
+| ----------- | ------ |
 | `pytest` | 単体・統合テスト |
 | `pytest-cov` | カバレッジ（任意） |
 | `mypy` | 静的型チェック |
@@ -73,7 +73,7 @@
 ### 3.3 開発環境
 
 | 項目 | 仕様 |
-|------|------|
+| ------ | ------ |
 | OS | macOS / Linux（開発者環境） |
 | VCS | Git |
 | CI | Phase 1 完了時に GitHub Actions（`pytest` + `mypy`）を追加 |
@@ -84,7 +84,7 @@
 
 ### 4.1 レイヤ構成
 
-```
+```text
 ┌─────────────────────────────────────┐
 │  examples/          CLI デモ        │
 ├─────────────────────────────────────┤
@@ -153,7 +153,7 @@ class Game(Protocol):
 Phase 1 で以下を**すべて**実装する。
 
 | メソッド | 契約 |
-|----------|------|
+| ---------- | ------ |
 | `is_terminal() -> bool` | 終局なら `returns()` が有効 |
 | `is_chance_node() -> bool` | True なら `current_player()` は未使用 |
 | `current_player() -> PlayerId` | 非 chance・非 terminal のみ |
@@ -198,7 +198,7 @@ def _check_chance_node(state): ...
 #### 6.1.1 OpenSpiel 互換パラメータ
 
 | パラメータ | 値 |
-|-----------|-----|
+| ----------- | ----- |
 | `num_players` | 2 |
 | `ante` | 1（各プレイヤー） |
 | `bet_size` | 1 |
@@ -224,7 +224,7 @@ class KuhnState:
 
 #### 6.1.3 ゲームフロー（状態機械）
 
-```
+```text
 [INITIAL] ante 投入, pot=2
     ↓
 [CHANCE] カード配布（6 通り、各 1/6）
@@ -239,7 +239,7 @@ class KuhnState:
 #### 6.1.4 合法手ルール
 
 | 状況 | 合法手 |
-|------|--------|
+| ------ | -------- |
 | `pending_bet == 0` | PASS, BET |
 | `pending_bet > 0`（相手 BET 済） | PASS（= fold）, BET（= call） |
 
@@ -248,7 +248,7 @@ class KuhnState:
 P0 の utility を `u` とすると、P1 の utility は `-u`。
 
 | 終局種別 | P0 utility |
-|----------|-----------|
+| ---------- | ----------- |
 | P1 fold | `+bet_size`（pot から相手 ante 分を獲得） |
 | P0 fold | `-bet_size` |
 | Showdown | カード比較に基づく pot 分配 |
@@ -265,7 +265,7 @@ P0 の utility を `u` とすると、P1 の utility は `-u`。
 
 プレイヤー `p` の観測:
 
-```
+```python
 f"p{p}_card={card}_history={'-'.join(public_actions)}"
 ```
 
@@ -280,7 +280,7 @@ Phase 1 では Kuhn 完了後に実装。Kuhn と同一 API（§5.3）に従う�
 #### 6.2.1 パラメータ
 
 | パラメータ | 値 |
-|-----------|-----|
+| ----------- | ----- |
 | `num_players` | 2 |
 | `ante` | 1 |
 | `bet_sizes` | [2, 4]（ラウンド 1, 2） |
@@ -289,7 +289,7 @@ Phase 1 では Kuhn 完了後に実装。Kuhn と同一 API（§5.3）に従う�
 
 #### 6.2.2 状態機械（概要）
 
-```
+```text
 [INITIAL] ante
     ↓
 [CHANCE] プライベートカード配布（6×5=30 通り）
@@ -308,7 +308,7 @@ Phase 1 では Kuhn 完了後に実装。Kuhn と同一 API（§5.3）に従う�
 Kuhn より多いが、OpenSpiel Leduc 互換の定式化を Phase 1 着手前に確定する。
 
 | 行動 | 意味 |
-|------|------|
+| ------ | ------ |
 | FOLD | フォールド |
 | CHECK_CALL | チェックまたはコール |
 | RAISE | レイズ |
@@ -351,7 +351,7 @@ class HumanAgent:
 ```
 
 | 項目 | 仕様 |
-|------|------|
+| ------ | ------ |
 | 入力方式 | 番号選択（例: `1=PASS`, `2=BET`） |
 | 不正入力 | エラーメッセージを出し、再入力を促す |
 | 情報表示 | 手番プレイヤーのプライベートカード、公共情報、これまでの行動 |
@@ -394,7 +394,7 @@ def run_hand(
 
 1 行 1 イベント。例（Kuhn）:
 
-```
+```text
 === Kuhn Poker (2p) ===
 Deal: P0=K, P1=Q (hidden)
 P0: BET
@@ -435,7 +435,7 @@ python -m examples.play_kuhn --human --seat 1   # P1 席でプレイ
 
 **対戦中の表示例（Kuhn、P0 手番）:**
 
-```
+```text
 --- Your turn (P0) ---
 Your card: K
 History: (none)
@@ -465,7 +465,7 @@ def collect_infosets(game: Game) -> dict[str, list[Action]]: ...
 ### 9.2 CFR ソルバー（`solvers/cfr.py`）
 
 | 項目 | 仕様 |
-|------|------|
+| ------ | ------ |
 | アルゴリズム | CFR（反復 regret matching） |
 | 入力 | `Game` + 反復回数 |
 | 出力 | `Strategy` = `dict[InfosetKey, dict[Action, float]]` |
@@ -487,7 +487,7 @@ Best-response 計算により NashConv を返す。Leduc で ≈ 0 に近づく�
 ### 10.1 Phase 1 テスト
 
 | テスト種別 | 内容 | ファイル例 |
-|-----------|------|-----------|
+| ----------- | ------ | ----------- |
 | 合法手 | 各局面で期待される action 集合 | `tests/games/test_kuhn_legal.py` |
 | 遷移 | 特定 action 列後の state フィールド | `tests/games/test_kuhn_transitions.py` |
 | ペイオフ | fold / showdown 各ケース | `tests/games/test_kuhn_payoffs.py` |
@@ -503,7 +503,7 @@ Kuhn の全 action 列を列挙し、既知の terminal state と照合（ゴー
 ### 10.3 Phase 2 テスト
 
 | テスト | 内容 |
-|--------|------|
+| -------- | ------ |
 | CFR 収束 | Kuhn: P0 EV ≈ -1/18（±0.01） |
 | Exploitability | 均衡戦略で ≈ 0 |
 | 戦略 I/O | save → load → 同一 action 分布 |
@@ -512,7 +512,7 @@ Kuhn の全 action 列を列挙し、既知の terminal state と照合（ゴー
 
 ## 11. プロジェクト構成
 
-```
+```text
 toy-poker/
 ├── docs/
 │   ├── requirements.md           # 機能要件
@@ -588,7 +588,7 @@ packages = ["toy_poker"]
 ## 13. コーディング規約
 
 | 項目 | 規約 |
-|------|------|
+| ------ | ------ |
 | 命名 | snake_case（関数・変数）、PascalCase（クラス）、UPPER（定数） |
 | docstring | 公開 API のみ（Google スタイル） |
 | import | `from __future__ import annotations` を全ファイル先頭 |
@@ -600,7 +600,7 @@ packages = ["toy_poker"]
 ## 14. 非機能要件の技術的実現
 
 | 非機能要件 | 実現方法 |
-|-----------|----------|
+| ----------- | ---------- |
 | 再現性 | `np.random.default_rng(seed)` を runner に渡す |
 | 性能（Leduc 全展開） | `trees/traverse.py` で generator 使用、Phase 2 で計測 |
 | 拡張性 | `Game` / `State` Protocol に準拠すれば `games/` 追加のみ |
@@ -613,7 +613,7 @@ packages = ["toy_poker"]
 ### Phase 1
 
 | # | タスク | 成果物 |
-|---|--------|--------|
+| --- | -------- | -------- |
 | M1 | プロジェクト骨格 | `pyproject.toml`, 空パッケージ, CI |
 | M2 | Kuhn コア | `KuhnGame`, `KuhnState`, 合法手・遷移・ペイオフ |
 | M3 | Kuhn ランナー | `run_hand`, テキスト履歴, `examples/play_kuhn.py` |
@@ -625,7 +625,7 @@ packages = ["toy_poker"]
 ### Phase 2
 
 | # | タスク | 成果物 |
-|---|--------|--------|
+| --- | -------- | -------- |
 | M7 | ゲーム木列挙 | `trees/traverse.py` |
 | M8 | CFR | `solvers/cfr.py` |
 | M9 | CFR エージェント | `agents/cfr_agent.py` |
@@ -636,6 +636,6 @@ packages = ["toy_poker"]
 ## 16. 変更履歴
 
 | 日付 | 変更内容 |
-|------|----------|
+| ------ | ---------- |
 | 2026-06-11 | 初版作成。requirements.md との整合表、OpenSpiel 風 API 詳細、Kuhn 2 人版仕様 |
 | 2026-06-11 | Phase 1 に HumanAgent（CLI 対人対戦）を追加 |
