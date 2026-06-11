@@ -29,6 +29,13 @@ strict = true
 packages = ["toy_poker"]
 mypy_path = "src"
 
+[tool.pyright]
+pythonVersion = "3.11"
+venvPath = "."
+venv = ".venv"
+include = ["src", "tests"]
+extraPaths = ["src"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 88
