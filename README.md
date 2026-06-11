@@ -14,6 +14,24 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+## クイックスタート
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+# ランダム AI 同士で 1 ハンド
+play-kuhn
+
+# 10 ハンド + シード固定
+play-kuhn --hands 10 --seed 42
+
+# 人間 vs ランダム AI
+play-kuhn --human
+play-kuhn --human --seat 1
+```
+
 ## 開発
 
 ```bash

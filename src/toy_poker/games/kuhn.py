@@ -30,23 +30,26 @@ class KuhnAction(IntEnum):
 class KuhnGame:
     """Two-player Kuhn Poker."""
 
-    num_players: int = 2
     ante: int = 1
     bet_size: int = 1
 
+    def num_players(self) -> int:
+        return 2
+
     def new_initial_state(self) -> KuhnState:
+        n = self.num_players()
         return KuhnState(
             game=self,
-            card_dealt=tuple(INVALID_PLAYER for _ in range(self.num_players + 1)),
+            card_dealt=tuple(INVALID_PLAYER for _ in range(n + 1)),
             history=(),
             first_bettor=INVALID_PLAYER,
             winner=INVALID_PLAYER,
-            pot=self.ante * self.num_players,
-            contributions=tuple(self.ante for _ in range(self.num_players)),
+            pot=self.ante * n,
+            contributions=tuple(self.ante for _ in range(n)),
         )
 
     def max_utility(self) -> float:
-        return float((self.num_players - 1) * 2)
+        return float((self.num_players() - 1) * 2)
 
 
 @dataclass(frozen=True)
@@ -65,7 +68,7 @@ class KuhnState:
         return self.winner != INVALID_PLAYER
 
     def is_chance_node(self) -> bool:
-        return not self.is_terminal() and len(self.history) < self.game.num_players
+        return not self.is_terminal() and len(self.history) < self.game.num_players()
 
     def current_player(self) -> PlayerId:
         if self.is_terminal():
@@ -74,7 +77,7 @@ class KuhnState:
         if self.is_chance_node():
             msg = "current_player() is undefined on chance nodes"
             raise ValueError(msg)
-        return len(self.history) % self.game.num_players
+        return len(self.history) % self.game.num_players()
 
     def legal_actions(self) -> list[Action]:
         if self.is_terminal():
@@ -105,7 +108,7 @@ class KuhnState:
             raise ValueError(msg)
 
         result: list[Payoff] = []
-        for player in range(self.game.num_players):
+        for player in range(self.game.num_players()):
             contribution = 2 if self._did_bet(player) else 1
             if player == self.winner:
                 result.append(float(self.pot - contribution))
@@ -116,7 +119,7 @@ class KuhnState:
     def action_history(self) -> list[str]:
         lines: list[str] = []
         for index, (player, move) in enumerate(self.history):
-            if index < self.game.num_players:
+            if index < self.game.num_players():
                 deal_player = index
                 card_name = CARD_NAMES[move]
                 lines.append(f"Deal P{deal_player}: {card_name}")
@@ -126,7 +129,7 @@ class KuhnState:
         return lines
 
     def information_state_string(self, player: PlayerId) -> str:
-        if player < 0 or player >= self.game.num_players:
+        if player < 0 or player >= self.game.num_players():
             msg = f"invalid player id: {player}"
             raise ValueError(msg)
         if len(self.history) <= player:
@@ -136,7 +139,7 @@ class KuhnState:
         card = self.history[player][1]
         betting = "".join(
             "b" if move == KuhnAction.BET else "p"
-            for deal_player, move in self.history[self.game.num_players :]
+            for deal_player, move in self.history[self.game.num_players() :]
         )
         return f"{card}{betting}"
 
@@ -187,7 +190,7 @@ class KuhnState:
         return replace(state, winner=winner)
 
     def _resolve_winner(self) -> int:
-        num_players = self.game.num_players
+        num_players = self.game.num_players()
         num_actions = len(self.history) - num_players
 
         if self.first_bettor == INVALID_PLAYER and num_actions == num_players:
@@ -200,7 +203,7 @@ class KuhnState:
         return INVALID_PLAYER
 
     def _showdown_winner_no_bets(self) -> int:
-        num_cards = self.game.num_players + 1
+        num_cards = self.game.num_players() + 1
         for card in range(num_cards - 1, -1, -1):
             player = self.card_dealt[card]
             if player != INVALID_PLAYER:
@@ -209,7 +212,7 @@ class KuhnState:
         raise RuntimeError(msg)
 
     def _showdown_winner_with_bets(self) -> int:
-        num_cards = self.game.num_players + 1
+        num_cards = self.game.num_players() + 1
         for card in range(num_cards - 1, -1, -1):
             player = self.card_dealt[card]
             if player != INVALID_PLAYER and self._did_bet(player):
@@ -223,7 +226,7 @@ class KuhnState:
         if player == self.first_bettor:
             return True
 
-        num_players = self.game.num_players
+        num_players = self.game.num_players()
         if player > self.first_bettor:
             history_index = num_players + player
         else:
