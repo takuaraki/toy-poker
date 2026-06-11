@@ -13,7 +13,7 @@
 |------|------|
 | 設計パラダイム | OpenSpiel 風の**明示的ゲーム木**（状態 = ノード、遷移 = 非破壊コピー） |
 | 実装方針 | 完全自前。OpenSpiel / Gymnasium は**実行時依存に含めない** |
-| 段階的リリース | Phase 1 = ゲームエンジン + ランダム AI、Phase 2 = CFR + 均衡 AI |
+| 段階的リリース | Phase 1 = ゲームエンジン + ランダム / 人間（CLI）AI、Phase 2 = CFR + 均衡 AI |
 | 型安全性 | `typing` + `@dataclass(frozen=True)` を基本。Phase 1 から型ヒント必須 |
 | 不変性 | `State` は immutable。`apply_action` は新インスタンスを返す |
 
@@ -27,8 +27,9 @@
 | §2.2 Kuhn 2 人版（3 人版不要） | §6.1 OpenSpiel 互換定式化 | 1 |
 | §2.3 OpenSpiel 風 API | §5 コア抽象化 | 1 |
 | §2.4 ゲームエンジン | §5, §6 | 1 |
-| §2.4 ランダム AI | §7.1 | 1 |
-| §2.4 テキスト履歴 | §8.2 | 1 |
+| §2.4 RandomAgent | §7.1 | 1 |
+| §2.4 HumanAgent（CLI 対人対戦） | §7.2 | 1 |
+| §2.4 テキスト履歴 | §8.2, §8.4 | 1 |
 | §2.5 情報集合・ゲーム木 | §9.1 | 2 |
 | §2.5 CFR ソルバー | §9.2 | 2 |
 | §2.5 均衡 AI・exploitability | §9.3 | 2 |
@@ -331,10 +332,39 @@ class RandomAgent:
 - チャンスノードは **runner** が処理。Agent はプレイヤー手番のみ
 - `rng` は `np.random.default_rng(seed)` で生成。seed 未指定時は非決定論的
 
-### 7.2 CFRAgent（Phase 2）
+### 7.2 HumanAgent（Phase 1）
+
+CLI（標準入力）で人間プレイヤーが着手を選ぶエージェント。
+
+```python
+@dataclass
+class HumanAgent:
+  player_id: PlayerId
+  input_fn: Callable[[str], str] = input   # テスト時は差し替え可能
+  output_fn: Callable[[str], None] = print
+
+  def select_action(self, state, player, legal_actions) -> Action:
+      # 1. 自分の観測（カード等）を表示
+      # 2. 合法手を番号付きで表示（行動名・意味付き）
+      # 3. input_fn で読み取り、合法な選択になるまで再入力
+      ...
+```
+
+| 項目 | 仕様 |
+|------|------|
+| 入力方式 | 番号選択（例: `1=PASS`, `2=BET`） |
+| 不正入力 | エラーメッセージを出し、再入力を促す |
+| 情報表示 | 手番プレイヤーのプライベートカード、公共情報、これまでの行動 |
+| 相手のカード | 終局まで非表示（ショーダウン時に開示） |
+| テスト | `input_fn` / `output_fn` をモックし、自動テスト可能にする |
+
+対戦構成のデフォルト: **P0 = HumanAgent、P1 = RandomAgent**（CLI オプションで席を入れ替え可能）。
+
+### 7.3 CFRAgent（Phase 2）
 
 - `solvers/cfr.py` が出力した `dict[str, dict[Action, float]]`（infoset → 行動確率）を参照
 - 推論時: 合法手に正規化した確率でサンプル、または argmax
+- Phase 2 完了後、HumanAgent と組み合わせて**人間 vs 均衡 AI** も同 API で可能
 
 ---
 
@@ -390,6 +420,34 @@ def run_match(
 
 `MatchResult` は `mean_returns`, `std_returns`, `histories` を含む。
 
+### 8.4 対人対戦 CLI（Phase 1）
+
+`examples/play_kuhn.py`（Leduc も同様）に人間対戦モードを用意する。
+
+```bash
+# AI 同士（既存）
+python -m examples.play_kuhn --hands 10 --seed 42
+
+# 人間 vs ランダム AI
+python -m examples.play_kuhn --human
+python -m examples.play_kuhn --human --seat 1   # P1 席でプレイ
+```
+
+**対戦中の表示例（Kuhn、P0 手番）:**
+
+```
+--- Your turn (P0) ---
+Your card: K
+History: (none)
+Legal actions:
+  [1] PASS  (check)
+  [2] BET   (bet 1)
+> 2
+```
+
+- `run_hand` は HumanAgent を含む `agents` リストをそのまま受け取る（runner 側の変更は最小）
+- バッチ実行（`run_match`）は AI 同士専用。HumanAgent を含む場合は 1 ハンドずつ CLI で実行
+
 ---
 
 ## 9. Phase 2 技術要件
@@ -435,6 +493,7 @@ Best-response 計算により NashConv を返す。Leduc で ≈ 0 に近づく�
 | ペイオフ | fold / showdown 各ケース | `tests/games/test_kuhn_payoffs.py` |
 | 零和 | `returns[0] + returns[1] == 0` | 全 terminal テスト |
 | 統合 | `run_hand` が例外なく完走 | `tests/test_runner.py` |
+| HumanAgent | モック入出力で合法手選択・不正入力の再入力 | `tests/agents/test_human.py` |
 | 再現性 | 同一 seed → 同一 returns | `tests/test_reproducibility.py` |
 
 ### 10.2 テストデータ
@@ -469,7 +528,8 @@ toy-poker/
 │       │   ├── kuhn.py           # KuhnGame, KuhnState, KuhnAction
 │       │   └── leduc.py          # Phase 1 後半
 │       ├── agents/
-│       │   └── random.py         # RandomAgent
+│       │   ├── random.py         # RandomAgent
+│       │   └── human.py          # HumanAgent
 │       ├── runner/
 │       │   ├── hand.py           # run_hand, run_match
 │       │   └── format.py         # format_hand (テキスト履歴)
@@ -557,7 +617,8 @@ packages = ["toy_poker"]
 | M1 | プロジェクト骨格 | `pyproject.toml`, 空パッケージ, CI |
 | M2 | Kuhn コア | `KuhnGame`, `KuhnState`, 合法手・遷移・ペイオフ |
 | M3 | Kuhn ランナー | `run_hand`, テキスト履歴, `examples/play_kuhn.py` |
-| M4 | Kuhn テスト | 合法手・ペイオフ・零和・再現性 |
+| M3b | Kuhn 対人 CLI | `HumanAgent`, `play_kuhn.py --human` |
+| M4 | Kuhn テスト | 合法手・ペイオフ・零和・再現性、HumanAgent（モック入出力） |
 | M5 | Leduc コア | `LeducGame`, `LeducState` |
 | M6 | Leduc ランナー・テスト | M3–M4 と同等 |
 
@@ -577,3 +638,4 @@ packages = ["toy_poker"]
 | 日付 | 変更内容 |
 |------|----------|
 | 2026-06-11 | 初版作成。requirements.md との整合表、OpenSpiel 風 API 詳細、Kuhn 2 人版仕様 |
+| 2026-06-11 | Phase 1 に HumanAgent（CLI 対人対戦）を追加 |
