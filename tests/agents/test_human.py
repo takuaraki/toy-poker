@@ -5,15 +5,24 @@ from __future__ import annotations
 import pytest
 
 from tests.games.helpers import BET, CALL, CHECK, FOLD, deal_cards, new_game
+from tests.games.leduc_helpers import CALL as LEDUC_CALL
+from tests.games.leduc_helpers import JS, KS, RAISE, deal_private
+from tests.games.leduc_helpers import new_game as new_leduc_game
 from toy_poker.agents.human import AnnouncingAgent, HumanAgent
 from toy_poker.agents.random import RandomAgent
 from toy_poker.core.rng import make_rng
 from toy_poker.games.kuhn import KuhnState
+from toy_poker.games.leduc import LeducState
 
 
 @pytest.fixture
 def checked_state() -> KuhnState:
     return deal_cards(new_game().new_initial_state(), 2, 1)  # P0=K
+
+
+@pytest.fixture
+def leduc_dealt() -> LeducState:
+    return deal_private(new_leduc_game().new_initial_state(), KS, JS)
 
 
 def test_human_selects_check(checked_state: KuhnState) -> None:
@@ -72,4 +81,33 @@ def test_announcing_agent_prints_action(checked_state: KuhnState) -> None:
         output_fn=outputs.append,
     )
     agent.select_action(checked_state, 0, [CHECK, BET])
+    assert outputs[0].startswith("P0:")
+
+
+def test_leduc_human_shows_card_and_public(leduc_dealt: LeducState) -> None:
+    inputs = iter(["1"])
+    outputs: list[str] = []
+    agent = HumanAgent(
+        player_id=0,
+        input_fn=lambda _: next(inputs),
+        output_fn=outputs.append,
+    )
+    action = agent.select_action(
+        leduc_dealt, 0, list(leduc_dealt.legal_actions())
+    )
+    assert action == LEDUC_CALL
+    assert any("Your card: Ks" in line for line in outputs)
+    assert any("Public: (none)" in line for line in outputs)
+    assert any("CHECK" in line for line in outputs)
+    assert any("RAISE" in line for line in outputs)
+
+
+def test_leduc_announcing_agent_prints_action(leduc_dealt: LeducState) -> None:
+    outputs: list[str] = []
+    agent = AnnouncingAgent(
+        RandomAgent(make_rng(0)),
+        player_id=0,
+        output_fn=outputs.append,
+    )
+    agent.select_action(leduc_dealt, 0, [LEDUC_CALL, RAISE])
     assert outputs[0].startswith("P0:")

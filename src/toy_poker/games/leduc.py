@@ -329,7 +329,9 @@ class LeducState:
         low, high = hand
         num_cards = self.game.num_cards()
 
-        if high % NUM_SUITS == 0 and high == low + 1:
+        # OpenSpiel: same-rank pair iff low is even and high == low + 1
+        # (e.g. Qs=2, Qh=3). Checking high%2 would mis-detect Qh+Ks as a pair.
+        if low % NUM_SUITS == 0 and high == low + 1:
             return num_cards * num_cards + low
         return (high // NUM_SUITS) * num_cards + (low // NUM_SUITS)
 

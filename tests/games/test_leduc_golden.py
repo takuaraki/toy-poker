@@ -7,7 +7,6 @@ import pytest
 from tests.games.leduc_helpers import (
     CALL,
     FOLD,
-    JH,
     JS,
     KH,
     KS,
@@ -25,12 +24,16 @@ from tests.games.leduc_helpers import (
 @pytest.mark.parametrize(
     ("p0", "p1", "r1", "public", "r2", "expected_winner", "expected_returns"),
     [
-        # check-check, check-check showdown: higher private wins (K > J)
-        (KS, JS, (CALL, CALL), JH, (CALL, CALL), 0, [1.0, -1.0]),
+        # K-high beats J-high when board does not pair either card
+        (KS, JS, (CALL, CALL), QH, (CALL, CALL), 0, [1.0, -1.0]),
         # P0 raises, P1 folds
         (QS, QH, (RAISE, FOLD), None, (), 0, [1.0, -1.0]),
         # P0 raises, P1 calls, check-check round 2, pair wins
         (KS, JS, (RAISE, CALL), KH, (CALL, CALL), 0, [3.0, -3.0]),
+        # Regression: Queen pair beats King high (user-reported showdown bug)
+        (KS, QS, (CALL, CALL), QH, (CALL, CALL), 1, [-1.0, 1.0]),
+        # Split pot: both King-high (Ks vs Kh, board Jack)
+        (KS, KH, (CALL, CALL), JS, (CALL, CALL), 0, [0.0, 0.0]),
     ],
 )
 def test_golden_paths(

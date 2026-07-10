@@ -65,6 +65,46 @@ class TestTransitions:
         assert state.winner == 0
         assert_zero_sum(state.returns())
 
+    def test_pair_beats_higher_singleton(self) -> None:
+        # Regression: P0=Ks, P1=Qs, public=Qh -> P1 pair of Queens beats K-high
+        # (buggy high%2 pair check wrongly gave P0 a "pair" of Qh+Ks)
+        state = deal_private(new_game().new_initial_state(), KS, QS)
+        state = play_round1(state, [CALL, CALL])
+        state = play_round2(state, QH, [CALL, CALL])
+        assert state.is_terminal()
+        assert state.winner == 1
+        assert state.returns() == [-1.0, 1.0]
+        assert_zero_sum(state.returns())
+
+    def test_adjacent_ranks_are_not_a_pair(self) -> None:
+        # Qh(3)+Ks(4) are consecutive IDs but different ranks — not a pair
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [CALL, CALL])
+        state = play_round2(state, QH, [CALL, CALL])
+        assert state._rank_hand(0) < state.game.num_cards() ** 2
+        # P0 K-high beats P1 J-high
+        assert state.winner == 0
+
+    def test_split_pot_same_rank_high_cards(self) -> None:
+        # P0=Ks, P1=Kh, board=Js -> both King-high with Jack; split pot
+        state = deal_private(new_game().new_initial_state(), KS, KH)
+        state = play_round1(state, [CALL, CALL])
+        state = play_round2(state, JS, [CALL, CALL])
+        assert state.is_terminal()
+        assert state.winners == (True, True)
+        assert state.returns() == [0.0, 0.0]
+        assert_zero_sum(state.returns())
+
+    def test_split_pot_after_raises(self) -> None:
+        # Equal contributions + tied ranks -> each nets zero
+        state = deal_private(new_game().new_initial_state(), JS, JH)
+        state = play_round1(state, [RAISE, CALL])
+        state = play_round2(state, KS, [RAISE, CALL])
+        assert state.is_terminal()
+        assert state.winners == (True, True)
+        assert state.pot == 14
+        assert state.returns() == [0.0, 0.0]
+
     def test_illegal_actions(self) -> None:
         state = new_game().new_initial_state().apply_action(JS)
         with pytest.raises(ValueError, match="illegal chance action"):

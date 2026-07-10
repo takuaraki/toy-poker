@@ -16,6 +16,7 @@ dev = ["pytest>=8.0", "pytest-cov>=4.0", "mypy>=1.8", "ruff>=0.3"]
 
 [project.scripts]
 play-kuhn = "toy_poker.examples.play_kuhn:main"
+play-leduc = "toy_poker.examples.play_leduc:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/toy_poker"]
