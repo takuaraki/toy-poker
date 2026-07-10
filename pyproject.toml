@@ -25,13 +25,13 @@ packages = ["src/toy_poker"]
 testpaths = ["tests"]
 
 [tool.mypy]
-python_version = "3.11"
+# 3.12: current NumPy stubs use PEP 695 `type` statements; mypy rejects
+# those when python_version < 3.12 (CI installs latest NumPy on 3.12).
+python_version = "3.12"
 strict = true
 packages = ["toy_poker"]
 mypy_path = "src"
 
-# NumPy stubs may use PEP 695 `type` statements (3.12+). Skip them so
-# mypy can still target 3.11 while CI installs current NumPy on 3.12.
 [[tool.mypy.overrides]]
 module = ["numpy", "numpy.*"]
 follow_imports = "skip"
