@@ -6,6 +6,7 @@ import pytest
 
 from tests.games.helpers import BET, CALL, CHECK, FOLD, deal_cards, new_game
 from tests.games.leduc_helpers import CALL as LEDUC_CALL
+from tests.games.leduc_helpers import FOLD as LEDUC_FOLD
 from tests.games.leduc_helpers import JS, KS, RAISE, deal_private
 from tests.games.leduc_helpers import new_game as new_leduc_game
 from toy_poker.agents.human import AnnouncingAgent, HumanAgent
@@ -111,3 +112,21 @@ def test_leduc_announcing_agent_prints_action(leduc_dealt: LeducState) -> None:
     )
     agent.select_action(leduc_dealt, 0, [LEDUC_CALL, RAISE])
     assert outputs[0].startswith("P0:")
+
+
+def test_leduc_human_facing_raise_shows_fold_call_raise(
+    leduc_dealt: LeducState,
+) -> None:
+    state = leduc_dealt.apply_action(RAISE)
+    inputs = iter(["1"])
+    outputs: list[str] = []
+    agent = HumanAgent(
+        player_id=1,
+        input_fn=lambda _: next(inputs),
+        output_fn=outputs.append,
+    )
+    action = agent.select_action(state, 1, list(state.legal_actions()))
+    assert action == LEDUC_FOLD
+    assert any("FOLD" in line for line in outputs)
+    assert any("CALL" in line for line in outputs)
+    assert any("RAISE" in line for line in outputs)

@@ -105,6 +105,86 @@ class TestTransitions:
         assert state.pot == 14
         assert state.returns() == [0.0, 0.0]
 
+    def test_kicker_breaks_same_board_high(self) -> None:
+        # Both King-high on Kh; Qs kicker beats Js kicker
+        state = deal_private(new_game().new_initial_state(), JS, QS)
+        state = play_round1(state, [CALL, CALL])
+        state = play_round2(state, KH, [CALL, CALL])
+        assert state.is_terminal()
+        assert state.winner == 1
+        assert state.returns() == [-1.0, 1.0]
+
+    def test_check_raise_call_ends_round1(self) -> None:
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [CALL, RAISE, CALL])
+        assert state.is_chance_node()
+        assert state.round_number == 2
+        assert state.pot == 6
+        assert state.contributions == (3, 3)
+        assert state.stakes == 3
+
+    def test_fold_to_reraise_in_round1(self) -> None:
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [RAISE, RAISE, FOLD])
+        assert state.is_terminal()
+        assert state.winner == 1
+        assert state.pot == 8
+        assert state.returns() == [-3.0, 3.0]
+
+    def test_check_raise_fold_in_round1(self) -> None:
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [CALL, RAISE, FOLD])
+        assert state.is_terminal()
+        assert state.winner == 1
+        assert state.returns() == [-1.0, 1.0]
+
+    def test_fold_in_round2(self) -> None:
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [CALL, CALL])
+        state = play_round2(state, QH, [RAISE, FOLD])
+        assert state.is_terminal()
+        assert state.winner == 0
+        assert state.pot == 6
+        assert state.returns() == [1.0, -1.0]
+
+    def test_check_raise_fold_in_round2(self) -> None:
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [CALL, CALL])
+        state = play_round2(state, QH, [CALL, RAISE, FOLD])
+        assert state.is_terminal()
+        assert state.winner == 1
+        assert state.pot == 6
+        assert state.returns() == [-1.0, 1.0]
+
+    def test_round2_raise_amount_is_four(self) -> None:
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [CALL, CALL])
+        state = play_round2(state, QH, [RAISE])
+        assert state.pot == 6
+        assert state.stakes == 5  # ante 1 + raise 4
+        assert state.contributions == (5, 1)
+
+    def test_stakes_carry_into_round2(self) -> None:
+        # OpenSpiel: stakes are not reset between rounds
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [RAISE, CALL])
+        assert state.is_chance_node()
+        state = state.apply_action(QH)
+        assert state.round_number == 2
+        assert state.stakes == 3
+        assert state.contributions == (3, 3)
+        assert LeducAction.FOLD not in state.legal_actions()
+
+    def test_max_raises_both_rounds_pot(self) -> None:
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [RAISE, RAISE, CALL])
+        state = play_round2(state, QH, [RAISE, RAISE, CALL])
+        assert state.is_terminal()
+        assert state.pot == 26
+        assert state.contributions == (13, 13)
+        assert state.winner == 0
+        assert state.returns() == [13.0, -13.0]
+
     def test_illegal_actions(self) -> None:
         state = new_game().new_initial_state().apply_action(JS)
         with pytest.raises(ValueError, match="illegal chance action"):
@@ -135,6 +215,13 @@ class TestLegalActions:
         assert state.is_chance_node()
         assert state.round1_sequence == (RAISE, RAISE, CALL)
 
+    def test_third_raise_not_legal(self) -> None:
+        state = deal_private(new_game().new_initial_state(), JS, JH)
+        state = play_round1(state, [RAISE, RAISE])
+        assert state.legal_actions() == [LeducAction.FOLD, LeducAction.CALL]
+        with pytest.raises(ValueError, match="illegal player action"):
+            state.apply_action(RAISE)
+
 
 class TestInformationState:
     def test_infostate_encoding(self) -> None:
@@ -142,6 +229,13 @@ class TestInformationState:
         state = state.apply_action(RAISE)
         assert state.information_state_string(0) == "4|x|r|"
         assert state.information_state_string(1) == "3|x|r|"
+
+    def test_infostate_includes_public_card(self) -> None:
+        state = deal_private(new_game().new_initial_state(), KS, QS)
+        state = play_round1(state, [CALL, CALL])
+        state = state.apply_action(QH)
+        assert state.information_state_string(0) == "4|3|cc|"
+        assert state.information_state_string(1) == "2|3|cc|"
 
 
 class TestActionHistory:

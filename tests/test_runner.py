@@ -115,3 +115,15 @@ def test_format_leduc_split_pot() -> None:
     text = format_hand(HandResult(returns=state.returns(), final_state=state))
     assert "Showdown: split pot (P0=Ks, P1=Kh; board=Js)" in text
     assert "Pot: 2 | Returns: P0=+0.0, P1=+0.0" in text
+
+
+def test_format_leduc_round2_fold() -> None:
+    state = deal_private(new_leduc_game().new_initial_state(), KS, JS)
+    state = play_round1(state, [LEDUC_CALL, LEDUC_CALL])
+    state = play_round2(state, KH, [RAISE, LEDUC_FOLD])
+    text = format_hand(HandResult(returns=state.returns(), final_state=state))
+    assert "Public: Kh" in text
+    assert "R2 P0: RAISE" in text
+    assert "R2 P1: FOLD" in text
+    assert "P1 folds" in text
+    assert "Pot: 6 | Returns: P0=+1.0, P1=-1.0" in text

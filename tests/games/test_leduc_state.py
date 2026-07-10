@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.games.leduc_helpers import CALL, deal_private, new_game
+from tests.games.leduc_helpers import CALL, JS, KS, deal_private, new_game, play_round1
 from toy_poker.games.leduc import LeducAction
 
 
@@ -17,6 +17,13 @@ class TestReturns:
     def test_current_player_undefined_on_chance(self) -> None:
         state = new_game().new_initial_state()
         with pytest.raises(ValueError, match="chance nodes"):
+            state.current_player()
+
+    def test_current_player_undefined_on_terminal(self) -> None:
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [LeducAction.RAISE, LeducAction.FOLD])
+        assert state.is_terminal()
+        with pytest.raises(ValueError, match="terminal"):
             state.current_player()
 
 
@@ -32,6 +39,17 @@ class TestChanceOutcomes:
         outcomes = state.chance_outcomes()
         assert len(outcomes) == 5
         assert 0 not in [card for card, _ in outcomes]
+
+    def test_four_cards_for_public_deal(self) -> None:
+        state = deal_private(new_game().new_initial_state(), KS, JS)
+        state = play_round1(state, [CALL, CALL])
+        assert state.is_chance_node()
+        outcomes = state.chance_outcomes()
+        remaining = [card for card, _ in outcomes]
+        assert len(remaining) == 4
+        assert KS not in remaining
+        assert JS not in remaining
+        assert all(prob == pytest.approx(1 / 4) for _, prob in outcomes)
 
 
 class TestClonePath:
