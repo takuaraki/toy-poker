@@ -162,8 +162,7 @@ class LeducState:
                     payouts[player] = float(share)
 
         return [
-            payout - self.contributions[player]
-            for player, payout in enumerate(payouts)
+            payout - self.contributions[player] for player, payout in enumerate(payouts)
         ]
 
     def action_history(self) -> list[str]:

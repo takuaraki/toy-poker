@@ -48,8 +48,7 @@ def _format_kuhn_hand(
 
 def _format_kuhn_deal(state: KuhnState, *, reveal: bool) -> list[str]:
     cards = [
-        _kuhn_card_name(state, player)
-        for player in range(state.game.num_players())
+        _kuhn_card_name(state, player) for player in range(state.game.num_players())
     ]
     if reveal:
         deal = f"Deal: P0={cards[0]}, P1={cards[1]}"
@@ -183,8 +182,7 @@ def _format_leduc_outcome(state: LeducState) -> str:
     winner_card = _leduc_card_name(state.player_card(winner))
     loser_card = _leduc_card_name(state.player_card(loser))
     return (
-        f"Showdown: P{winner}={winner_card} beats P{loser}={loser_card}"
-        f" (board={board})"
+        f"Showdown: P{winner}={winner_card} beats P{loser}={loser_card} (board={board})"
     )
 
 

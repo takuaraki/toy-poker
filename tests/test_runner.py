@@ -108,6 +108,7 @@ def test_format_leduc_showdown() -> None:
     assert "Showdown: P0=Ks beats P1=Js (board=Kh)" in text
     assert "Pot: 2 | Returns: P0=+1.0, P1=-1.0" in text
 
+
 def test_format_leduc_split_pot() -> None:
     state = deal_private(new_leduc_game().new_initial_state(), KS, KH)
     state = play_round1(state, [LEDUC_CALL, LEDUC_CALL])

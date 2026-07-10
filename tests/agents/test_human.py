@@ -93,9 +93,7 @@ def test_leduc_human_shows_card_and_public(leduc_dealt: LeducState) -> None:
         input_fn=lambda _: next(inputs),
         output_fn=outputs.append,
     )
-    action = agent.select_action(
-        leduc_dealt, 0, list(leduc_dealt.legal_actions())
-    )
+    action = agent.select_action(leduc_dealt, 0, list(leduc_dealt.legal_actions()))
     assert action == LEDUC_CALL
     assert any("Your card: Ks" in line for line in outputs)
     assert any("Public: (none)" in line for line in outputs)
