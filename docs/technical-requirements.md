@@ -460,7 +460,7 @@ def collect_infosets(game: Game) -> dict[str, list[Action]]: ...
 ```
 
 - Kuhn: 全木展開 ≈ 数百ノード（即座）
-- Leduc: 全木展開 = 9547 ノード（1秒以内目標）
+- Leduc: 全木展開 = 9,457 ノード（1秒以内目標）
 
 ### 9.2 CFR ソルバー（`solvers/cfr.py`）
 
