@@ -34,4 +34,27 @@ def traverse_game_tree(game: Game) -> Iterator[State]:
 
 
 def collect_infosets(game: Game) -> dict[str, list[Action]]:
-    raise NotImplementedError
+    infosets: dict[str, list[Action]] = {}
+
+    for state in traverse_game_tree(game):
+        # プレイヤーノードのみを対象とする
+        if state.is_terminal() or state.is_chance_node():
+            continue
+        # 情報集合をキー、合法手を値として追加
+        player = state.current_player()
+        key = state.information_state_string(player)
+        actions = state.legal_actions()
+
+        existing = infosets.get(key)
+        if existing is None:
+            # 情報集合が存在しない場合は、合法手を追加
+            infosets[key] = actions
+        elif existing != actions:
+            # 情報集合が存在する場合は、合法手が一致しない場合はエラー
+            msg = (
+                "inconsistent legal actions at infoset "
+                f"{key!r}: {existing} vs {actions}"
+            )
+            raise ValueError(msg)
+
+    return infosets
