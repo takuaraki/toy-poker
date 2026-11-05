@@ -1,4 +1,5 @@
 """Game tree traversal and information-set collection."""
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -15,7 +16,7 @@ def traverse_game_tree(game: Game) -> Iterator[State]:
 
         # このstateを返す
         yield state
-        
+
         # 子ノードをstackに追加
         if state.is_terminal():
             # 終端ノードの場合は子ノードがないのでスキップ
