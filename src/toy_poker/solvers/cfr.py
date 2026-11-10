@@ -18,8 +18,8 @@ class CFRSolver:
         self.regret_sum = {k: {a: 0.0 for a in acts} for k, acts in infosets.items()}
         self.strategy_sum = {k: {a: 0.0 for a in acts} for k, acts in infosets.items()}
 
-    def iterate(self) -> None:
-        raise NotImplementedError
+    def iterate(self) -> list[Payoff]:
+        return self._cfr(self.game.new_initial_state(), 1.0, 1.0, 1.0)
 
     def average_strategy(self) -> Strategy:
         raise NotImplementedError
@@ -29,6 +29,7 @@ class CFRSolver:
     ) -> list[Payoff]:
         if state.is_terminal():
             return state.returns()  # 終端ノードの場合は利得を返す
+
         if state.is_chance_node():
             values = [0.0, 0.0]  # プレイヤー0とプレイヤー1の期待利得
             for action, prob in state.chance_outcomes():
@@ -42,7 +43,33 @@ class CFRSolver:
                 values[1] += child_values[1] * prob
             return values
 
-        raise NotImplementedError
+        # 決定ノードの場合
+        player = state.current_player()
+        actions = state.legal_actions()
+        strategy = {
+            a: 1.0 / len(actions) for a in actions
+        }  # 後で regret matching に置き換える
+
+        values = [0.0, 0.0]
+        for action in actions:
+            prob = strategy[action]
+            if player == 0:
+                child_values = self._cfr(
+                    state.apply_action(action),
+                    reach_p0 * prob,
+                    reach_p1,
+                    reach_chance,
+                )
+            else:
+                child_values = self._cfr(
+                    state.apply_action(action),
+                    reach_p0,
+                    reach_p1 * prob,
+                    reach_chance,
+                )
+            values[0] += child_values[0] * prob
+            values[1] += child_values[1] * prob
+        return values
 
 
 def regret_matching_strategy(regrets: dict[Action, float]) -> dict[Action, float]:

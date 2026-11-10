@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import pytest
 
+from toy_poker.core.protocols import Game
 from toy_poker.core.types import Action
-from toy_poker.solvers.cfr import regret_matching_strategy
+from toy_poker.games.kuhn import KuhnGame
+from toy_poker.games.leduc import LeducGame
+from toy_poker.solvers.cfr import CFRSolver, regret_matching_strategy
 
 
 @pytest.mark.parametrize(
@@ -54,3 +57,21 @@ def test_regret_matching_does_not_mutate_input() -> None:
     regrets = {0: -1.0, 1: 3.0}
     regret_matching_strategy(regrets)
     assert regrets == {0: -1.0, 1: 3.0}
+
+
+# イテレーション1回目は後悔値がすべて 0 なので一様に打つ
+# 一様に打ったときの期待値と一致するか確認する
+# - Kuhn: 手計算の値
+# - Leduc: 木全体を分数で厳密に数え上げた値。同じ Leduc 実装を使うため、
+#   _cfr の期待値計算は検証できるが、ゲームのルール自体の正しさは保証しない
+@pytest.mark.parametrize(
+    ("game", "expected"),
+    [
+        (KuhnGame(), [1 / 8, -1 / 8]),
+        (LeducGame(), [-5 / 64, 5 / 64]),
+    ],
+    ids=["kuhn", "leduc"],
+)
+def test_first_iteration_value(game: Game, expected: list[float]) -> None:
+    values = CFRSolver(game).iterate()
+    assert values == pytest.approx(expected)
