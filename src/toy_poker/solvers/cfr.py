@@ -42,7 +42,16 @@ class CFRSolver:
         return values
 
     def average_strategy(self) -> Strategy:
-        raise NotImplementedError
+        average_strategy: Strategy = {}
+        for k, acts in self.infosets.items():
+            normalizing_sum = sum(self.strategy_sum[k].values())
+            if normalizing_sum > 0:
+                average_strategy[k] = {
+                    a: self.strategy_sum[k][a] / normalizing_sum for a in acts
+                }
+            else:
+                average_strategy[k] = {a: 1.0 / len(acts) for a in acts}
+        return average_strategy
 
     def _cfr(
         self, state: State, reach_p0: float, reach_p1: float, reach_chance: float
