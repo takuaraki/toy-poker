@@ -2,11 +2,42 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+from typing import Any
+
 from toy_poker.core.protocols import Game, State
 from toy_poker.core.types import Action, Payoff
 from toy_poker.trees.traverse import collect_infosets
 
 Strategy = dict[str, dict[Action, float]]  # infoset キー → 行動 → 確率
+
+
+def save_strategy(strategy: Strategy, path: str | Path) -> None:
+    """Write a strategy table to JSON (action keys stored as strings)."""
+    payload: dict[str, dict[str, float]] = {
+        infoset: {str(action): float(prob) for action, prob in action_probs.items()}
+        for infoset, action_probs in strategy.items()
+    }
+    Path(path).write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
+def load_strategy(path: str | Path) -> Strategy:
+    """Load a strategy table written by :func:`save_strategy`."""
+    raw: Any = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise TypeError(f"strategy JSON must be an object, got {type(raw).__name__}")
+
+    strategy: Strategy = {}
+    for infoset, action_probs in raw.items():
+        if not isinstance(infoset, str) or not isinstance(action_probs, dict):
+            raise TypeError("strategy JSON entries must map infoset str → action probs")
+        strategy[infoset] = {
+            int(action): float(prob) for action, prob in action_probs.items()
+        }
+    return strategy
 
 
 class CFRSolver:

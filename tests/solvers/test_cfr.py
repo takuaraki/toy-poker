@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from toy_poker.core.protocols import Game, State
 from toy_poker.core.types import Action
 from toy_poker.games.kuhn import KuhnGame
 from toy_poker.games.leduc import LeducGame
-from toy_poker.solvers.cfr import CFRSolver, Strategy, regret_matching_strategy
+from toy_poker.solvers.cfr import (
+    CFRSolver,
+    Strategy,
+    load_strategy,
+    regret_matching_strategy,
+    save_strategy,
+)
 from toy_poker.trees.traverse import collect_infosets
 
 
@@ -155,3 +163,35 @@ def test_kuhn_average_strategy_approaches_nash() -> None:
     values = expected_returns(game, solver.average_strategy())
     assert values[0] == pytest.approx(-1 / 18, abs=0.01)
     assert values[1] == pytest.approx(1 / 18, abs=0.01)
+
+
+def test_strategy_save_load_roundtrip(tmp_path: Path) -> None:
+    solver = CFRSolver(KuhnGame())
+    for _ in range(100):
+        solver.iterate()
+    original = solver.average_strategy()
+
+    path = tmp_path / "kuhn_strategy.json"
+    save_strategy(original, path)
+    loaded = load_strategy(path)
+
+    assert set(loaded) == set(original)
+    for key, action_probs in original.items():
+        assert loaded[key] == pytest.approx(action_probs)
+
+
+def test_strategy_save_load_preserves_expected_value(tmp_path: Path) -> None:
+    game = KuhnGame()
+    solver = CFRSolver(game)
+    for _ in range(200):
+        solver.iterate()
+    original = solver.average_strategy()
+
+    path = tmp_path / "kuhn_strategy.json"
+    save_strategy(original, path)
+    loaded = load_strategy(path)
+
+    assert expected_returns(game, loaded) == pytest.approx(
+        expected_returns(game, original)
+    )
+
