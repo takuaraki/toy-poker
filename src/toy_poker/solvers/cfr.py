@@ -27,9 +27,11 @@ class CFRSolver:
     def _cfr(
         self, state: State, reach_p0: float, reach_p1: float, reach_chance: float
     ) -> list[Payoff]:
+        # 終端ノードの場合
         if state.is_terminal():
-            return state.returns()  # 終端ノードの場合は利得を返す
+            return state.returns()  # 利得を返す
 
+        # チャンスノードの場合
         if state.is_chance_node():
             values = [0.0, 0.0]  # プレイヤー0とプレイヤー1の期待利得
             for action, prob in state.chance_outcomes():
