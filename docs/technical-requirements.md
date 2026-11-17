@@ -13,7 +13,7 @@
 | ------ | ------ |
 | 設計パラダイム | OpenSpiel 風の**明示的ゲーム木**（状態 = ノード、遷移 = 非破壊コピー） |
 | 実装方針 | 完全自前。OpenSpiel / Gymnasium は**実行時依存に含めない** |
-| 段階的リリース | Phase 1 = ゲームエンジン + ランダム / 人間（CLI）AI、Phase 2 = CFR + 均衡 AI |
+| 段階的リリース | Phase 1 = ゲームコア、Phase 2 = 戦略コア、Phase 3 = UX/I/O（GUI は Phase 3 拡張） |
 | 型安全性 | `typing` + `@dataclass(frozen=True)` を基本。Phase 1 から型ヒント必須 |
 | 不変性 | `State` は immutable。`apply_action` は新インスタンスを返す |
 
@@ -33,6 +33,8 @@
 | §2.5 情報集合・ゲーム木 | §9.1 | 2 |
 | §2.5 CFR ソルバー | §9.2 | 2 |
 | §2.5 均衡 AI・exploitability | §7.3 StrategyAgent、§9.3 | 2 |
+| §2.6 人間 vs 学習済み戦略（CLI） | §8.5 | 3 |
+| §2.6 GUI（拡張） | §8.6 | 3 拡張 |
 | §2.7 再現性 | §11.1 RNG | 1 |
 | §2.7 stdlib + numpy のみ | §3 依存関係 | 1 |
 | §5 Phase 1 受け入れ基準 | §10 テスト戦略 | 1 |
@@ -389,11 +391,13 @@ class StrategyAgent:
 | 推論 | 合法手に正規化した確率で **sample**、または **argmax** |
 | 未知 infoset / 合計 0 | 一様フォールバック、またはエラー（実装で明示） |
 | ファイル | `agents/strategy.py` |
-| 利用例 | CFR 平均戦略を渡せば均衡近似 AI。HumanAgent と同 API で**人間 vs 均衡 AI** も可能 |
+| 利用例 | CFR 平均戦略を渡せば均衡近似 AI。HumanAgent と同 API で組み合わせ可能 |
+| CLI / GUI | 対戦入口は **Phase 3**（§8.5）。M9 ではエージェント本体と単体テストまで |
 
 M9 のマイルストーン名称「CFR エージェント」は、要件上は本 `StrategyAgent` で満たす。
 
 ---
+
 
 ## 8. ランナー・テキスト履歴
 
@@ -474,6 +478,34 @@ Legal actions:
 
 - `run_hand` は HumanAgent を含む `agents` リストをそのまま受け取る（runner 側の変更は最小）
 - バッチ実行（`run_match`）は AI 同士専用。HumanAgent を含む場合は 1 ハンドずつ CLI で実行
+
+### 8.5 人間 vs StrategyAgent CLI（Phase 3）
+
+Phase 2 完了後に着手。学習済み戦略ファイルを読み、HumanAgent と対戦する。
+
+```bash
+# 人間 vs 学習済み戦略（例）
+python -m toy_poker.examples.play_kuhn --human --strategy path/to/kuhn.json
+python -m toy_poker.examples.play_kuhn --human --strategy path/to/kuhn.json --seat 1
+# Leduc も同様（play_leduc）
+```
+
+| 項目 | 仕様 |
+| ------ | ------ |
+| 戦略入力 | `load_strategy(path)` で JSON を読み、`StrategyAgent` に渡す |
+| 既存 `--human` | 戦略未指定時は従来どおり **RandomAgent** 相手 |
+| 席 | `--seat` で Human の席を指定（既存と同様） |
+| モード | `StrategyAgent` は sample をデフォルト（オプションで argmax も可） |
+
+### 8.6 GUI 対戦（Phase 3 拡張）
+
+Phase 3 の**必須完了条件には含めない**。CLI（§8.5）の後に着手してよい。
+
+| 項目 | 仕様 |
+| ------ | ------ |
+| 目的 | 人間 vs 学習済み戦略、または観戦の GUI |
+| 技術選定 | Web / デスクトップ等は着手時に決定（コア依存は増やさない） |
+| 前提 | 既存の `Game` / `Agent` / `run_hand` / `Strategy` I/O を再利用 |
 
 ---
 
@@ -659,6 +691,18 @@ packages = ["toy_poker"]
 | M9 | StrategyAgent | `agents/strategy.py`（任意 Strategy を実行。CFR 戦略も渡せる） |
 | M10 | 検証 | Nash EV 一致、exploitability ≈ 0 |
 
+### Phase 3（UX / I/O）
+
+| # | タスク | 成果物 |
+| --- | -------- | -------- |
+| M11 | 人間 vs StrategyAgent CLI | `play_kuhn` / `play_leduc` に `--strategy`（§8.5） |
+
+### Phase 3 拡張（必須ではない）
+
+| # | タスク | 成果物 |
+| --- | -------- | -------- |
+| M12 | GUI 対戦 | §8.6。技術選定は着手時 |
+
 ---
 
 ## 16. 変更履歴
@@ -669,3 +713,4 @@ packages = ["toy_poker"]
 | 2026-06-11 | Phase 1 に HumanAgent（CLI 対人対戦）を追加 |
 | 2026-11-17 | M9 を CFRAgent から StrategyAgent に一般化（戦略生成と実行を分離） |
 | 2026-11-17 | `Strategy` 型を `core/types.py` に移動（CFR 非依存） |
+| 2026-11-17 | Phase 3（UX/I/O）を追加。CLI=M11、GUI=M12（Phase 3 拡張） |
