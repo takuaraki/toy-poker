@@ -8,8 +8,7 @@ from typing import Literal
 import numpy as np
 
 from toy_poker.core.protocols import State
-from toy_poker.core.types import Action, PlayerId
-from toy_poker.solvers.cfr import Strategy
+from toy_poker.core.types import Action, PlayerId, Strategy
 
 
 @dataclass

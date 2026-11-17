@@ -7,8 +7,7 @@ from typing import Literal
 
 from toy_poker.agents.strategy import StrategyAgent
 from toy_poker.core.rng import make_rng
-from toy_poker.core.types import Action, ChanceOutcome, Payoff, PlayerId
-from toy_poker.solvers.cfr import Strategy
+from toy_poker.core.types import Action, ChanceOutcome, Payoff, PlayerId, Strategy
 
 INFOSET = "I0"
 PASS = 0

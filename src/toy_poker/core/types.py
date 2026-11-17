@@ -6,3 +6,4 @@ PlayerId = int
 Payoff = float
 Action = int
 ChanceOutcome = tuple[Action, float]
+Strategy = dict[str, dict[Action, float]]  # infoset キー → 行動 → 確率

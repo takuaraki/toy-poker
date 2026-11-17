@@ -7,10 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from toy_poker.core.protocols import Game, State
-from toy_poker.core.types import Action, Payoff
+from toy_poker.core.types import Action, Payoff, Strategy
 from toy_poker.trees.traverse import collect_infosets
-
-Strategy = dict[str, dict[Action, float]]  # infoset キー → 行動 → 確率
 
 
 def save_strategy(strategy: Strategy, path: str | Path) -> None:

@@ -7,12 +7,11 @@ from pathlib import Path
 import pytest
 
 from toy_poker.core.protocols import Game, State
-from toy_poker.core.types import Action
+from toy_poker.core.types import Action, Strategy
 from toy_poker.games.kuhn import KuhnGame
 from toy_poker.games.leduc import LeducGame
 from toy_poker.solvers.cfr import (
     CFRSolver,
-    Strategy,
     load_strategy,
     regret_matching_strategy,
     save_strategy,

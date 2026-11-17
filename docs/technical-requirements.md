@@ -367,6 +367,7 @@ CFR 専用エージェントではなく、**任意の `Strategy` テーブル�
 CFR は戦略の生成手段の一つであり、実行側（本エージェント）とは分離する。
 
 ```python
+# core/types.py
 Strategy = dict[str, dict[Action, float]]  # infoset → 行動 → 確率
 
 @dataclass
@@ -547,7 +548,7 @@ toy-poker/
 │   └── toy_poker/
 │       ├── __init__.py
 │       ├── core/
-│       │   ├── types.py          # PlayerId, Action, ...
+│       │   ├── types.py          # PlayerId, Action, Strategy, ...
 │       │   ├── protocols.py      # Game, State, Agent
 │       │   └── rng.py            # make_rng(seed)
 │       ├── games/
@@ -667,3 +668,4 @@ packages = ["toy_poker"]
 | 2026-06-11 | 初版作成。requirements.md との整合表、OpenSpiel 風 API 詳細、Kuhn 2 人版仕様 |
 | 2026-06-11 | Phase 1 に HumanAgent（CLI 対人対戦）を追加 |
 | 2026-11-17 | M9 を CFRAgent から StrategyAgent に一般化（戦略生成と実行を分離） |
+| 2026-11-17 | `Strategy` 型を `core/types.py` に移動（CFR 非依存） |

@@ -2,7 +2,7 @@
 
 from toy_poker.core.protocols import Agent, Game, State
 from toy_poker.core.rng import make_rng
-from toy_poker.core.types import Action, ChanceOutcome, Payoff, PlayerId
+from toy_poker.core.types import Action, ChanceOutcome, Payoff, PlayerId, Strategy
 
 __all__ = [
     "Action",
@@ -12,5 +12,6 @@ __all__ = [
     "Payoff",
     "PlayerId",
     "State",
+    "Strategy",
     "make_rng",
 ]
