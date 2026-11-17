@@ -1,6 +1,6 @@
 # トイポーカー研究環境 — 技術要件定義
 
-> 最終更新: 2026-06-11  
+> 最終更新: 2026-11-17  
 > 関連: [要件定義（機能）](./requirements.md)
 
 本ドキュメントは [requirements.md](./requirements.md) の機能要件を実装可能な粒度に落とし込んだ技術仕様である。両者の対応関係は §2 に示す。
@@ -32,7 +32,7 @@
 | §2.4 テキスト履歴 | §8.2, §8.4 | 1 |
 | §2.5 情報集合・ゲーム木 | §9.1 | 2 |
 | §2.5 CFR ソルバー | §9.2 | 2 |
-| §2.5 均衡 AI・exploitability | §9.3 | 2 |
+| §2.5 均衡 AI・exploitability | §7.3 StrategyAgent、§9.3 | 2 |
 | §2.7 再現性 | §11.1 RNG | 1 |
 | §2.7 stdlib + numpy のみ | §3 依存関係 | 1 |
 | §5 Phase 1 受け入れ基準 | §10 テスト戦略 | 1 |
@@ -107,8 +107,9 @@
 
 - `core` ← `games` ← `agents`, `runner`
 - `games` 同士の相互依存なし
-- Phase 2: `trees` ← `solvers` ← `agents`（CFR エージェント）
+- Phase 2: `trees` ← `solvers`（戦略を生成）→ `agents`（`StrategyAgent` が戦略を実行）
 - `runner` は `games` + `agents` のみ依存（Phase 1）
+- `StrategyAgent` は `Strategy` テーブルにのみ依存し、CFR 実装には依存しない
 
 ### 4.3 設計原則
 
@@ -360,11 +361,36 @@ class HumanAgent:
 
 対戦構成のデフォルト: **P0 = HumanAgent、P1 = RandomAgent**（CLI オプションで席を入れ替え可能）。
 
-### 7.3 CFRAgent（Phase 2）
+### 7.3 StrategyAgent（Phase 2）
 
-- `solvers/cfr.py` が出力した `dict[str, dict[Action, float]]`（infoset → 行動確率）を参照
-- 推論時: 合法手に正規化した確率でサンプル、または argmax
-- Phase 2 完了後、HumanAgent と組み合わせて**人間 vs 均衡 AI** も同 API で可能
+CFR 専用エージェントではなく、**任意の `Strategy` テーブルを実行するエージェント**とする。  
+CFR は戦略の生成手段の一つであり、実行側（本エージェント）とは分離する。
+
+```python
+Strategy = dict[str, dict[Action, float]]  # infoset → 行動 → 確率
+
+@dataclass
+class StrategyAgent:
+    strategy: Strategy
+    rng: np.random.Generator
+    mode: Literal["sample", "argmax"] = "sample"
+
+    def select_action(self, state, player, legal_actions) -> Action:
+        # 1. information_state_string(player) で infoset キーを取得
+        # 2. strategy[key] から合法手の確率だけ取り出し再正規化
+        # 3. mode に応じてサンプル、または argmax
+        ...
+```
+
+| 項目 | 仕様 |
+| ------ | ------ |
+| 入力 | `Strategy`（`CFRSolver.average_strategy()` / `load_strategy()` / 手書きいずれも可） |
+| 推論 | 合法手に正規化した確率で **sample**、または **argmax** |
+| 未知 infoset / 合計 0 | 一様フォールバック、またはエラー（実装で明示） |
+| ファイル | `agents/strategy.py` |
+| 利用例 | CFR 平均戦略を渡せば均衡近似 AI。HumanAgent と同 API で**人間 vs 均衡 AI** も可能 |
+
+M9 のマイルストーン名称「CFR エージェント」は、要件上は本 `StrategyAgent` で満たす。
 
 ---
 
@@ -529,7 +555,8 @@ toy-poker/
 │       │   └── leduc.py          # Phase 1 後半
 │       ├── agents/
 │       │   ├── random.py         # RandomAgent
-│       │   └── human.py          # HumanAgent
+│       │   ├── human.py          # HumanAgent
+│       │   └── strategy.py       # StrategyAgent（Phase 2）
 │       ├── runner/
 │       │   ├── hand.py           # run_hand, run_match
 │       │   └── format.py         # format_hand (テキスト履歴)
@@ -628,7 +655,7 @@ packages = ["toy_poker"]
 | --- | -------- | -------- |
 | M7 | ゲーム木列挙 | `trees/traverse.py` |
 | M8 | CFR | `solvers/cfr.py` |
-| M9 | CFR エージェント | `agents/cfr_agent.py` |
+| M9 | StrategyAgent | `agents/strategy.py`（任意 Strategy を実行。CFR 戦略も渡せる） |
 | M10 | 検証 | Nash EV 一致、exploitability ≈ 0 |
 
 ---
@@ -639,3 +666,4 @@ packages = ["toy_poker"]
 | ------ | ---------- |
 | 2026-06-11 | 初版作成。requirements.md との整合表、OpenSpiel 風 API 詳細、Kuhn 2 人版仕様 |
 | 2026-06-11 | Phase 1 に HumanAgent（CLI 対人対戦）を追加 |
+| 2026-11-17 | M9 を CFRAgent から StrategyAgent に一般化（戦略生成と実行を分離） |
