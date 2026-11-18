@@ -23,6 +23,9 @@ packages = ["src/toy_poker"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "slow: long-running tests (excluded from default CI)",
+]
 
 [tool.mypy]
 # 3.12: current NumPy stubs use PEP 695 `type` statements; mypy rejects

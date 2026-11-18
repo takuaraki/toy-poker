@@ -37,8 +37,7 @@ def test_leduc_uniform_strategy_has_large_exploitability() -> None:
 
 
 def test_leduc_cfr_reduces_exploitability() -> None:
-    # Leduc は重いので反復は控えめ。要件の「十分小さい」までは見ず、
-    # 学習で下がることと非負であること（旧実装の負値バグの再発防止）を見る。
+    # 速いスモーク: 学習で下がることと非負であること（旧実装の負値バグの再発防止）
     game = LeducGame()
     uniform_expl = exploitability(game, CFRSolver(game).average_strategy())
 
@@ -50,3 +49,16 @@ def test_leduc_cfr_reduces_exploitability() -> None:
     assert cfr_expl >= 0.0
     assert cfr_expl < uniform_expl
     assert cfr_expl < 0.5
+
+
+@pytest.mark.slow
+def test_leduc_cfr_exploitability_sufficiently_small() -> None:
+    # 要件: Leduc で exploitability が十分小さい。CI では -m "not slow" で除外。
+    game = LeducGame()
+    solver = CFRSolver(game)
+    for _ in range(1_000):
+        solver.iterate()
+
+    expl = exploitability(game, solver.average_strategy())
+    assert expl >= 0.0
+    assert expl < 0.05
