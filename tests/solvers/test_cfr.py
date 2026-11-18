@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from toy_poker.core.protocols import Game, State
+from toy_poker.core.protocols import Game
 from toy_poker.core.types import Action, Strategy
 from toy_poker.games.kuhn import KuhnGame
 from toy_poker.games.leduc import LeducGame
@@ -16,6 +16,7 @@ from toy_poker.solvers.cfr import (
     regret_matching_strategy,
     save_strategy,
 )
+from toy_poker.solvers.evaluate import expected_returns
 from toy_poker.trees.traverse import collect_infosets
 
 
@@ -28,34 +29,6 @@ def _assert_strategy_is_distribution(
         assert set(probs) == set(actions)
         assert all(prob >= 0.0 for prob in probs.values())
         assert sum(probs.values()) == pytest.approx(1.0)
-
-
-def expected_returns(game: Game, strategy: Strategy) -> list[float]:
-    """Expected payoffs when both players follow ``strategy``."""
-
-    def walk(state: State) -> list[float]:
-        if state.is_terminal():
-            return list(state.returns())
-
-        if state.is_chance_node():
-            values = [0.0, 0.0]
-            for action, prob in state.chance_outcomes():
-                child_values = walk(state.apply_action(action))
-                values[0] += child_values[0] * prob
-                values[1] += child_values[1] * prob
-            return values
-
-        player = state.current_player()
-        key = state.information_state_string(player)
-        probs = strategy[key]
-        values = [0.0, 0.0]
-        for action in state.legal_actions():
-            child_values = walk(state.apply_action(action))
-            values[0] += child_values[0] * probs[action]
-            values[1] += child_values[1] * probs[action]
-        return values
-
-    return walk(game.new_initial_state())
 
 
 @pytest.mark.parametrize(
