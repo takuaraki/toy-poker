@@ -40,7 +40,15 @@ play-leduc --human
 ## 開発
 
 ```bash
+# 通常のテスト（CI と同じ。slow を除外）
+pytest -m "not slow"
+
+# 時間のかかるテストのみ（例: Leduc exploitability の厳密チェック）
+pytest -m slow
+
+# すべて実行
 pytest
+
 mypy src/toy_poker
 ruff check src tests
 ruff format src tests
