@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from toy_poker.games.kuhn import KuhnGame
+from toy_poker.games.leduc import LeducGame
 from toy_poker.solvers.cfr import CFRSolver
 from toy_poker.solvers.evaluate import expected_returns, exploitability
 
@@ -25,3 +26,27 @@ def test_kuhn_cfr_strategy_has_small_exploitability() -> None:
 
     strategy = solver.average_strategy()
     assert exploitability(game, strategy) < 0.01
+
+
+def test_leduc_uniform_strategy_has_large_exploitability() -> None:
+    game = LeducGame()
+    strategy = CFRSolver(game).average_strategy()
+    expl = exploitability(game, strategy)
+    assert expl >= 0.0
+    assert expl > 1.0
+
+
+def test_leduc_cfr_reduces_exploitability() -> None:
+    # Leduc は重いので反復は控えめ。要件の「十分小さい」までは見ず、
+    # 学習で下がることと非負であること（旧実装の負値バグの再発防止）を見る。
+    game = LeducGame()
+    uniform_expl = exploitability(game, CFRSolver(game).average_strategy())
+
+    solver = CFRSolver(game)
+    for _ in range(50):
+        solver.iterate()
+    cfr_expl = exploitability(game, solver.average_strategy())
+
+    assert cfr_expl >= 0.0
+    assert cfr_expl < uniform_expl
+    assert cfr_expl < 0.5
