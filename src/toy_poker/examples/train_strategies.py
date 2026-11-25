@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 from toy_poker.core.protocols import Game
@@ -89,13 +90,18 @@ def _train_one(
 ) -> None:
     game = _make_game(name)
     solver = CFRSolver(game)
+    started_at = datetime.now().astimezone()
     print(f"[{name}] training {iterations} iterations → {output}")
     t0 = time.perf_counter()
     for i in range(1, iterations + 1):
         solver.iterate()
-        if i == iterations or i % max(1, iterations // 10) == 0:
+        if i == iterations or i % 10 == 0:
             elapsed = time.perf_counter() - t0
-            print(f"[{name}] {i}/{iterations} ({elapsed:.1f}s)")
+            remaining = elapsed * (iterations - i) / i
+            print(
+                f"[{name}] {i}/{iterations} "
+                f"(elapsed {elapsed:.1f}s, eta {remaining:.1f}s)"
+            )
     strategy = solver.average_strategy()
     save_strategy(strategy, output)
     size_kib = output.stat().st_size / 1024
@@ -103,8 +109,51 @@ def _train_one(
 
     if report_exploitability:
         print(f"[{name}] computing exploitability…")
-        expl = exploitability(game, strategy)
-        print(f"[{name}] exploitability = {expl:.6f}")
+        expl_value = exploitability(game, strategy)
+        expl_text = f"{expl_value:.6f}"
+        print(f"[{name}] exploitability = {expl_text}")
+    else:
+        expl_text = "skip"
+
+    finished_at = datetime.now().astimezone()
+    duration_s = time.perf_counter() - t0
+    log_path = output.with_suffix(".log")
+    _write_train_log(
+        log_path,
+        started_at=started_at,
+        finished_at=finished_at,
+        duration_s=duration_s,
+        game=name,
+        iterations=iterations,
+        exploitability=expl_text,
+    )
+    print(f"[{name}] wrote {log_path}")
+
+
+def _write_train_log(
+    path: Path,
+    *,
+    started_at: datetime,
+    finished_at: datetime,
+    duration_s: float,
+    game: str,
+    iterations: int,
+    exploitability: str,
+) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                f"started_at: {started_at.isoformat(timespec='seconds')}",
+                f"finished_at: {finished_at.isoformat(timespec='seconds')}",
+                f"duration_s: {duration_s:.3f}",
+                f"game: {game}",
+                f"iterations: {iterations}",
+                f"exploitability: {exploitability}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":
