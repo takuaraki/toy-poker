@@ -1,0 +1,5 @@
+# Strategy JSON: keep small files in normal Git.
+# When an artifact exceeds ~1 MiB, track it with LFS instead, e.g.:
+#   git lfs track 'strategies/*.json'
+# which appends lines like:
+# strategies/*.json filter=lfs diff=lfs merge=lfs -text

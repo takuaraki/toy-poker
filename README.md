@@ -32,16 +32,28 @@ play-kuhn --human
 play-kuhn --human --seat 1
 
 # Kuhn: 人間 vs 学習済み戦略
-# （先に CFR で JSON を保存しておく）
-play-kuhn --human --strategy path/to/kuhn.json
-play-kuhn --human --strategy path/to/kuhn.json --mode argmax --seat 1
+play-kuhn --human --strategy strategies/kuhn.json
+play-kuhn --human --strategy strategies/kuhn.json --mode argmax --seat 1
 
 # Leduc も同様
 play-leduc
 play-leduc --hands 10 --seed 42
 play-leduc --human
-play-leduc --human --strategy path/to/leduc.json
+play-leduc --human --strategy strategies/leduc.json
 ```
+
+### 戦略 JSON の生成
+
+```bash
+# Kuhn + Leduc（Leduc は数分かかる）
+train-strategies
+
+# 片方だけ / 反復回数指定
+train-strategies --game kuhn
+train-strategies --game leduc --iterations 1000
+```
+
+出力は `strategies/*.json`。現状の Kuhn / Leduc は数十 KiB 以下なので通常の Git で管理する。将来 1 MiB を超える場合は Git LFS（例: `git lfs track 'strategies/*.json'`）へ切り替える。
 
 ## 開発
 
