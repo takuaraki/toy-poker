@@ -4,16 +4,21 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable
+from pathlib import Path
+from typing import Literal, cast
 
 import numpy as np
 
 from toy_poker.agents.human import AnnouncingAgent, HumanAgent
 from toy_poker.agents.random import RandomAgent
-from toy_poker.core.protocols import Agent
+from toy_poker.agents.strategy import StrategyAgent
+from toy_poker.core.protocols import Agent, Game
 from toy_poker.core.rng import make_rng
 from toy_poker.games.leduc import LeducGame
 from toy_poker.runner.format import format_hand
 from toy_poker.runner.hand import run_hand, run_match
+from toy_poker.solvers.cfr import load_strategy
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,7 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--human",
         action="store_true",
-        help="play one hand against a random AI",
+        help="play one hand against an AI",
     )
     parser.add_argument(
         "--seat",
@@ -46,6 +51,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         choices=[0, 1],
         help="seat when using --human (default: 0)",
+    )
+    parser.add_argument(
+        "--strategy",
+        type=Path,
+        default=None,
+        help="strategy JSON for the AI opponent (requires --human)",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["sample", "argmax"],
+        default="sample",
+        help="StrategyAgent action selection mode (default: sample)",
     )
     return parser
 
@@ -60,12 +77,20 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("--human mode supports exactly one hand")
     if args.human and args.quiet:
         parser.error("--human cannot be combined with --quiet")
+    if args.strategy is not None and not args.human:
+        parser.error("--strategy requires --human")
 
     game = LeducGame()
     rng = make_rng(args.seed)
 
     if args.human:
-        _play_human_game(game, rng, human_seat=args.seat)
+        _play_human_game(
+            game,
+            rng,
+            human_seat=args.seat,
+            strategy_path=args.strategy,
+            mode=args.mode,
+        )
         return
 
     agents = [RandomAgent(rng), RandomAgent(rng)]
@@ -91,21 +116,50 @@ def main(argv: list[str] | None = None) -> None:
 
 
 def _play_human_game(
-    game: LeducGame,
+    game: Game,
     rng: np.random.Generator,
     human_seat: int,
+    strategy_path: Path | None = None,
+    mode: str = "sample",
+    input_fn: Callable[[str], str] = input,
+    output_fn: Callable[[str], None] = print,
 ) -> None:
     ai_seat = 1 - human_seat
-    human = HumanAgent(player_id=human_seat)
-    ai = AnnouncingAgent(RandomAgent(rng), player_id=ai_seat)
+    human = HumanAgent(
+        player_id=human_seat,
+        input_fn=input_fn,
+        output_fn=output_fn,
+    )
+    ai_inner = _build_ai_agent(rng, strategy_path=strategy_path, mode=mode)
+    ai = AnnouncingAgent(ai_inner, player_id=ai_seat, output_fn=output_fn)
     agents: list[Agent] = [human, ai] if human_seat == 0 else [ai, human]
-    print("=== Leduc Hold'em (2p) — Human vs Random AI ===")
+
+    opponent = "Strategy AI" if strategy_path is not None else "Random AI"
+    print(f"=== Leduc Hold'em (2p) — Human vs {opponent} ===")
     print(f"You are P{human_seat}. Opponent is P{ai_seat}.")
+    if strategy_path is not None:
+        print(f"Strategy: {strategy_path} (mode={mode})")
     result = run_hand(game, agents, rng)
     print()
     print(format_hand(result))
     print()
     _print_returns(result.returns)
+
+
+def _build_ai_agent(
+    rng: np.random.Generator,
+    *,
+    strategy_path: Path | None,
+    mode: str,
+) -> Agent:
+    if strategy_path is None:
+        return RandomAgent(rng)
+    strategy = load_strategy(strategy_path)
+    return StrategyAgent(
+        strategy=strategy,
+        rng=rng,
+        mode=cast(Literal["sample", "argmax"], mode),
+    )
 
 
 def _print_returns(returns: list[float]) -> None:

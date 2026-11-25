@@ -31,10 +31,16 @@ play-kuhn --hands 10 --seed 42
 play-kuhn --human
 play-kuhn --human --seat 1
 
+# Kuhn: 人間 vs 学習済み戦略
+# （先に CFR で JSON を保存しておく）
+play-kuhn --human --strategy path/to/kuhn.json
+play-kuhn --human --strategy path/to/kuhn.json --mode argmax --seat 1
+
 # Leduc も同様
 play-leduc
 play-leduc --hands 10 --seed 42
 play-leduc --human
+play-leduc --human --strategy path/to/leduc.json
 ```
 
 ## 開発

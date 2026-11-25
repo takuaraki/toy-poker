@@ -713,3 +713,4 @@ packages = ["toy_poker"]
 | 2026-11-17 | M9 を CFRAgent から StrategyAgent に一般化（戦略生成と実行を分離） |
 | 2026-11-17 | `Strategy` 型を `core/types.py` に移動（CFR 非依存） |
 | 2026-11-17 | Phase 3（UX/I/O）を追加。CLI=M11、GUI=M12（Phase 3 拡張） |
+| 2026-11-25 | M11 実装: `play_kuhn` / `play_leduc` に `--strategy` / `--mode` |
