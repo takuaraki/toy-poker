@@ -32,8 +32,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
-        help="random seed (default: 42)",
+        default=None,
+        help="random seed (default: nondeterministic)",
     )
     parser.add_argument(
         "--quiet",
@@ -109,7 +109,8 @@ def main(argv: list[str] | None = None) -> None:
             print(format_hand(hand_result))
             print()
 
-    print(f"Played {match.num_hands} hands (seed={args.seed})")
+    seed_label = args.seed if args.seed is not None else "random"
+    print(f"Played {match.num_hands} hands (seed={seed_label})")
     for player, mean in enumerate(match.mean_returns):
         std = match.std_returns[player]
         print(f"P{player} mean return: {mean:+.4f} (std {std:.4f})")

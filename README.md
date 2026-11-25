@@ -21,10 +21,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# Kuhn: ランダム AI 同士で 1 ハンド
+# Kuhn: ランダム AI 同士で 1 ハンド（毎回ランダム）
 play-kuhn
 
-# Kuhn: 10 ハンド + シード固定
+# Kuhn: 10 ハンド + シード固定（再現用）
 play-kuhn --hands 10 --seed 42
 
 # Kuhn: 人間 vs ランダム AI
